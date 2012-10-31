@@ -132,19 +132,19 @@ namespace ResourceMonitor
             {
                 return;
             }
-            float maxWorkingSet = -1;
-            float workingSet;
+            double maxWorkingSet = -1;
+            double workingSet;
             try
             {
                 WriteLogHeader();
                 while (ProcessExist(m_monitorProcess.Id) == true)
                 {
-                    workingSet = (float)m_monitorProcess.WorkingSet64 / (1024 * 1024);
+                    workingSet = ((double)m_monitorProcess.WorkingSet64) / (1024 * 1024);
                     if (workingSet > maxWorkingSet)
                     {
                         maxWorkingSet = workingSet;
                     }
-                    Log("working set = " + workingSet + "MB");
+                    Log("working set = " + workingSet.ToString("0.00") + "MB");
                     Thread.Sleep((int)(m_intervalSeconds * 1000));
                 }
             }
