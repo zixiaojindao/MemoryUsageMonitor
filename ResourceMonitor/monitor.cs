@@ -156,7 +156,7 @@ namespace ResourceMonitor
             {
                 if (m_logger != null)
                 {
-                    Log("max working set = " + maxWorkingSet + "MB");
+                    Log("max working set = " + maxWorkingSet.ToString("0.00") + "MB");
                     m_logger.Close();
                 }
             }
