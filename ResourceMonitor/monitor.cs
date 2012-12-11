@@ -12,33 +12,39 @@ namespace ResourceMonitor
     {
         private string m_processName;
         private int m_processID;
-        private string m_logFileName;
-        private Process m_monitorProcess;
+        private string m_logFileNamePrefix;
+        private string[] m_logFilePath;
+        private Process[] m_monitorProcess;
         private float m_intervalSeconds;
-        private StreamWriter m_logger;
+        private StreamWriter[] m_logger;
         private bool m_append;
 
-        public Monitor(string processName, string logFileName, float intervalSeconds, int processID, bool append)
+        public Monitor(string processName, string logFilePrefix, float intervalSeconds, int processID, bool append)
         {
             m_processID = processID;
             m_processName = processName;
-            m_logFileName = logFileName;
+            m_logFileNamePrefix = logFilePrefix;
             m_intervalSeconds = intervalSeconds;
             m_append = append;
         }
 
         private bool OpenLogFile()
         {
-            m_logger = null;
             try
             {
                 if (m_append == true)
                 {
-                    m_logger = new StreamWriter(new FileStream(m_logFileName, FileMode.Append | FileMode.Create, FileAccess.Write));
+                    for (int i = 0; i < m_logFilePath.Length; ++i)
+                    {
+                        m_logger[i] = new StreamWriter(new FileStream(m_logFilePath[i], FileMode.Append | FileMode.Create, FileAccess.Write));
+                    }
                 }
                 else
                 {
-                    m_logger = new StreamWriter(new FileStream(m_logFileName, FileMode.Create, FileAccess.Write));
+                    for(int i = 0; i < m_logFilePath.Length; ++i)
+                    {
+                        m_logger[i] = new StreamWriter(new FileStream(m_logFilePath[i], FileMode.Create, FileAccess.Write));
+                    }
                 }
             }
             catch (Exception e)
@@ -49,11 +55,11 @@ namespace ResourceMonitor
             return true;
         }
 
-        private bool ProcessExist(int id)
+        private bool ProcessExist(int i)
         {
             try
             {
-                m_monitorProcess = Process.GetProcessById(id);
+                m_monitorProcess[i] = Process.GetProcessById(m_monitorProcess[i].Id);
             }
             catch (ArgumentException e)
             {
@@ -62,32 +68,37 @@ namespace ResourceMonitor
             return true;
         }
 
-        private bool CheckProcessExistAndUnique()
+        private bool SetUp()
         {
-            Process[] candiateProcess = Process.GetProcessesByName(m_processName);
             if (m_processID == -1)
             {
-                if (candiateProcess.Length > 1)
+                Process[] candiateProcess = Process.GetProcessesByName(m_processName);
+                if (candiateProcess.Length >= 1)
                 {
-                    Console.WriteLine("more than one process have the same process as {0} please use process id \n",
-                        m_processName);
-                    return false;
-                }
-                else if (candiateProcess.Length == 0)
-                {
-                    Console.WriteLine("no process named {0}\n", m_processName);
-                    return false;
+                    m_logFilePath = new string[candiateProcess.Length];
+                    m_monitorProcess = new Process[candiateProcess.Length];
+                    m_logger = new StreamWriter[candiateProcess.Length];
+                    for (int i = 0; i < candiateProcess.Length; ++i)
+                    {
+                        m_logFilePath[i] = "pid_" + candiateProcess[i].Id + "_" + m_logFileNamePrefix;
+                        m_monitorProcess[i] = candiateProcess[i];
+                    }
                 }
                 else
                 {
-                    m_monitorProcess = candiateProcess[0];
+                    Console.WriteLine("no process named {0}\n", m_processName);
+                    return false;
                 }
             }
             else
             {
                 try
                 {
-                    m_monitorProcess = Process.GetProcessById(m_processID);
+                    m_monitorProcess = new Process[1];
+                    m_logFilePath = new string[1];
+                    m_logger = new StreamWriter[1];
+                    m_monitorProcess[0] = Process.GetProcessById(m_processID);
+                    m_logFilePath[0] = m_logFileNamePrefix;
                 }
                 catch (ArgumentException e)
                 {
@@ -98,30 +109,30 @@ namespace ResourceMonitor
             return true;
         }
 
-        private void Log(string line)
+        private void Log(int i, string line)
         {
             string time = DateTime.Now.TimeOfDay.ToString();
             Console.WriteLine("[" + time + "]" + line);
-            m_logger.WriteLine("[" + time + "]" + line);
-            m_logger.Flush();
+            m_logger[i].WriteLine("[" + time + "]" + line);
+            m_logger[i].Flush();
         }
 
-        private void WriteLogHeader()
+        private void WriteLogHeader(int i)
         {
-            Log("");
-            Log("/*******************************/");
-            Log("start time =" + DateTime.Now);
-            Log("monitor process id = " + m_monitorProcess.Id);
-            Log("monitor process name = " + m_monitorProcess.ProcessName);
-            Log("monitor process interval time = " + m_intervalSeconds + "seconds");
-            Log("/********************************/");
+            Log(i, "");
+            Log(i, "/*******************************/");
+            Log(i, "start time =" + DateTime.Now);
+            Log(i, "monitor process id = " + m_monitorProcess[i].Id);
+            Log(i, "monitor process name = " + m_monitorProcess[i].ProcessName);
+            Log(i, "monitor process interval time = " + m_intervalSeconds + "seconds");
+            Log(i, "/********************************/");
         }
 
         public void StartMonitor()
         {
             if (m_processID == -1)
             {
-                while(CheckProcessExistAndUnique() == false)
+                while(SetUp() == false)
                 {
                     int delay = 2;
                     Console.WriteLine("wait for uncreated process:{0} for {1} seconds", m_processName, delay);
@@ -132,33 +143,67 @@ namespace ResourceMonitor
             {
                 return;
             }
-            double maxWorkingSet = -1;
+            double[] maxWorkingSet = new double[m_monitorProcess.Length];
+            for (int i = 0; i < maxWorkingSet.Length; ++i)
+            {
+                maxWorkingSet[i] = -1;
+            }
+
             double workingSet;
-            try
+
+            for (int i = 0; i < m_monitorProcess.Length; ++i)
             {
-                WriteLogHeader();
-                while (ProcessExist(m_monitorProcess.Id) == true)
+                WriteLogHeader(i);
+            }
+
+            while (true)
+            {
+                int comp = 0;
+                for (int i = 0; i < m_monitorProcess.Length; ++i)
                 {
-                    workingSet = ((double)m_monitorProcess.WorkingSet64) / (1024 * 1024);
-                    if (workingSet > maxWorkingSet)
+                    try
                     {
-                        maxWorkingSet = workingSet;
+                        if (m_monitorProcess[i] != null && ProcessExist(i) == true)
+                        {
+                            workingSet = ((double)m_monitorProcess[i].WorkingSet64) / (1024 * 1024);
+                            if (workingSet > maxWorkingSet[i])
+                            {
+                                maxWorkingSet[i] = workingSet;
+                            }
+                            Log(i, "working set = " + workingSet.ToString("0.00") + "MB");
+                        }
+                        else if (m_monitorProcess[i] != null)
+                        {
+                            comp += 1;
+                            if (m_logger[i] != null)
+                            {
+                                Log(i, "max working set = " + maxWorkingSet[i].ToString("0.00") + "MB");
+                                m_logger[i].Close();
+                                m_monitorProcess[i] = null;
+                            }
+                        }
+                        else
+                        {
+                            comp += 1;
+                        }
                     }
-                    Log("working set = " + workingSet.ToString("0.00") + "MB");
-                    Thread.Sleep((int)(m_intervalSeconds * 1000));
+                    catch (Exception e)
+                    {
+                        comp += 1;
+                        Console.WriteLine(e.Message);
+                        if (m_logger[i] != null)
+                        {
+                            Log(i, "max working set = " + maxWorkingSet[i].ToString("0.00") + "MB");
+                            m_logger[i].Close();
+                            m_monitorProcess[i] = null;
+                        }
+                    } 
                 }
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e.Message);
-            }
-            finally
-            {
-                if (m_logger != null)
+                if (comp == m_monitorProcess.Length)
                 {
-                    Log("max working set = " + maxWorkingSet.ToString("0.00") + "MB");
-                    m_logger.Close();
+                    break;
                 }
+                Thread.Sleep((int)(m_intervalSeconds * 1000));
             }
         }
     }
