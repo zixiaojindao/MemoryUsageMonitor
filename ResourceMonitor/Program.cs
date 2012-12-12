@@ -10,8 +10,9 @@ namespace ResourceMonitor
     {
         static void Usage()
         {
-            Console.WriteLine("ResourceMonitor path2logFile [-a] [-n name] | [-i id] [-t interval]");
+            Console.WriteLine("ResourceMonitor path2logFile options");
             Console.WriteLine("-a: append open log file");
+            Console.WriteLine("-np: # of processes with same process name");
             Console.WriteLine("-n: process name");
             Console.WriteLine("-i: process id");
             Console.WriteLine("-t: record interval time(float in second), default value 1 second");
@@ -27,6 +28,7 @@ namespace ResourceMonitor
             string logFilePath;
             bool append = false;
             float interval = 1;
+            int np = 1;
             if (args.Length < 1)
             {
                 Usage();
@@ -72,6 +74,17 @@ namespace ResourceMonitor
                         }
                     }
                 }
+                else if (args[i] == "-np")
+                {
+                    try
+                    {
+                        np = int.Parse(args[i + 1]);
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine("invalid -np {0} option", args[i + 1]);
+                    }
+                }
                 else if (args[i] == "-a")
                 {
                     append = true;
@@ -92,7 +105,7 @@ namespace ResourceMonitor
                 Usage();
                 return;
             }
-            Monitor mon = new Monitor(name, logFilePath, interval, id, append);
+            Monitor mon = new Monitor(name, logFilePath, interval, id, append, np);
             mon.StartMonitor();
         }
     }
