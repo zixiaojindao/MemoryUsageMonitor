@@ -94,7 +94,7 @@ namespace ResourceMonitor
                     Usage();
                     return;
                 }
-                else if (args[i].Contains("-") == true)
+                else if (args[i].Length > 0 && args[0] == "-" == true)
                 {
                     Console.WriteLine("invalid {0} option", args[i]);
                     return;

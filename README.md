@@ -2,7 +2,7 @@
 
 2. Usage of this program is as blow:
 
-ResourceMonitor.exe path2logFile [-a] [-n name] | [-i id] [-t interval]
+ResourceMonitor.exe path2logFile options 
 
 -a: append open log file
 
@@ -10,7 +10,9 @@ ResourceMonitor.exe path2logFile [-a] [-n name] | [-i id] [-t interval]
 
 -i: process id
 
--t: record interval time(float in second), default value 1 second
+-np[1]: # of process with the same process name
+
+-t[1]: record interval time(float in second)
 
 -h: usage of this program
 

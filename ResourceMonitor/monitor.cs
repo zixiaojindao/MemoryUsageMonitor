@@ -94,7 +94,7 @@ namespace ResourceMonitor
                     m_maxWorkingSet = new double[candiateProcess.Length];
                     for (int i = 0; i < candiateProcess.Length; ++i)
                     {
-                        m_logFilePath[i] = "pid_" + candiateProcess[i].Id + "_" + m_logFileNamePrefix;
+                        m_logFilePath[i] = m_logFileNamePrefix + "_pid_" + candiateProcess[i].Id + ".txt"; 
                         m_monitorProcess[i] = candiateProcess[i];
                         m_allProcessId[i] = candiateProcess[i].Id;
                         m_maxWorkingSet[i] = -1;
@@ -117,7 +117,7 @@ namespace ResourceMonitor
                     m_maxWorkingSet = new double[1];
                     m_monitorProcess[0] = Process.GetProcessById(m_processID);
                     m_allProcessId[0] = m_monitorProcess[0].Id;
-                    m_logFilePath[0] = "pid_" + m_monitorProcess[0].Id + m_logFileNamePrefix;
+                    m_logFilePath[0] = m_logFileNamePrefix + "_pid_" + m_monitorProcess[0].Id + ".txt"; 
                     m_maxWorkingSet[0] = -1;
                 }
                 catch (ArgumentException e)
@@ -150,7 +150,7 @@ namespace ResourceMonitor
 
         private void WriteStatistic()
         {
-            string filePath = "statistic_" + m_logFileNamePrefix;
+            string filePath = m_logFileNamePrefix + "_statistic.txt";
             double total = 0;
             StreamWriter sw = null;
             try
